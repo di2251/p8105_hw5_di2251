@@ -124,4 +124,106 @@ respond at different rates.
 
 ### Problem 3
 
+Write function for one dataset:
+```{r}
+sim_t_test = function(mu, n = 30, sigma = 5) {
+  x = rnorm(n, mean = mu, sd = sigma)
+  
+  t.test(x, mu = 0) |>
+    broom::tidy() |>
+    select(estimate, p.value)
+}
+```
+
+Run 5000 datasets for mu = 0: 
+```{r}
+sim_mu_0 = 
+  tibble(iter = 1:5000) |>
+  mutate(results = map(iter, \(i) sim_t_test(mu = 0))) |>
+  unnest(results)
+```
+
+Repeat for mu = 0, 1, 2, 3, 4, 5, 6:
+```{r}
+sim_results = 
+  expand_grid(
+    mu = 0:6,
+    iter = 1:5000
+  ) |>
+  mutate(results = map(mu, \(m) sim_t_test(mu = m))) |>
+  unnest(results)
+```
+
+Flag rejections:
+```{r}
+sim_results = 
+  sim_results |>
+  mutate(reject = p.value < 0.05)
+```
+
+Plot 1, power vs true mu
+```{r}
+power_df = 
+  sim_results |>
+  group_by(mu) |>
+  summarize(power = mean(reject))
+
+power_df
+```
+
+```{r}
+power_df |>
+  ggplot(aes(x = mu, y = power)) +
+  geom_line() + 
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 0:6) +
+  labs(
+    title = "Power of one-sample t-test by true effect size",
+    x = "True value of mu",
+    y = "Power (proportionate of null rejections"
+  )
+```
+
+Power increases as the true effect size increases. When mu is 0, the null is
+true, so the rejection rate is about 0.05. Power rises steeply from mu = 1 to
+approximately mu = 3 and levels off near 1 by mu = 5. 
+
+Plot 2, average estimate vs true mu
+```{r}
+est_df =
+  sim_results |>
+  group_by(mu) |>
+  summarize(
+    avg_est_all = mean(estimate),
+    avg_est_rejected = mean(estimate[reject])
+  ) |>
+  pivot_longer(
+    starts_with("avg_est"),
+    names_to = "sample_type",
+    names_prefix = "avg_est",
+    values_to = "avg_estimate"
+  ) |>
+  mutate(
+    sample_type = recode(sample_type,
+                         all = "All samples",
+                         rejected = "Null rejected only")
+  )
+
+est_df
+```
+
+```{r}
+est_df |>
+  ggplot(aes(x = mu, y = avg_estimate, color = sample_type)) +
+  geom_line() +
+  geom_point(size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  scale_x_continuous(breaks = 0:6) +
+  labs(
+    title = "Average estimate of mu by true mu",
+    x = "True value of mu",
+    y = "Average estimate of mu",
+    color = ""
+  )
+```
 
