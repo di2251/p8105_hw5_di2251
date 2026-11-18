@@ -66,6 +66,7 @@ head(results)
 
 ### Problem 2
 
+Read in files:
 ```{r, message=FALSE, warning=FALSE}
 csv_data = 
   tibble(
@@ -73,9 +74,10 @@ csv_data =
     path = str_c("data/data/", files)
   ) |>
   mutate(data = map(path, read_csv)) |>
-  unnest()
+  unnest(data)
 ```
 
+Tidy data:
 ```{r}
 data_tidy =
   csv_data |>
@@ -91,17 +93,34 @@ data_tidy =
     names_prefix = "week_"
   ) |>
   mutate(week = as.numeric(week)) |>
-  select(exp_arm, sub_ID, week, outcome)
+  select(exp_arm, sub_ID, subject = files, week, outcome)
 ```
 
+
+Create spaghetti plot:
 ```{r}
 data_tidy |>
-  ggplot(aes(x = week, y = outcome, group = exp_arm, color = exp_arm)) +
+  ggplot(aes(x = week, y = outcome, group = subject, color = exp_arm)) +
   geom_point() +
   geom_path() +
-  facet_grid(~exp_arm)
+  facet_grid(~exp_arm) +
+  labs(
+    title = "Observations over time by study arm",
+    x = "Week",
+    y = "Outcome",
+    color = "Arm"
+  )
 ```
-
+This plot demonstrates a clear difference between the two arms in how outcomes
+change over time. In the control arm, outcomes show no consistent trend. Most 
+subjects fluctuate between about -1 and 4 across the 8 weeks, and the weekly 
+movement appears random rather than in any discernible pattern. Lines cross
+frequently, so there is little evidence that subjects stay consistently above
+or below average. Subjects in the experiential arm, display a steady, roughly
+linear increase. Most start between about -1 and 3.5 at week 1 and end between
+about 3 and 7 at week 8. the experimental arm also spreads out over time, with 
+more variability between subjects at later weeks, suggesting that individuals
+respond at different rates. 
 
 ### Problem 3
 
