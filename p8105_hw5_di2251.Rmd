@@ -1,0 +1,108 @@
+---
+title: "p8105_hw5_di2251"
+author: "di2251"
+date: "2026-11-18"
+output: github_document
+---
+
+```{r setup, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(readr)
+library(dplyr)
+```
+
+### Problem 1
+
+Suppose you put `n` people in a room, and want to know the probability that at
+least two people share a birthday. For simplicity, we'll assume there are no
+leap years (i.e. there are only 365 days) and that birthdays are uniformly 
+distributed over the year (which is not the case).
+
+Write a function that, for a fixed group size, randomly draws "birthdays" for 
+each person; checks whether there are duplicate birthdays in the group; and 
+returns `TRUE` or `FALSE` based on the result.
+
+Next, run this function 10,000 times for each group size between 2 and 50. For 
+each group size, compute the probability that at least two people in the group
+will share a birthday by averaging across 10,000 simulation runs. Make a plot
+showing the probability as a function of group size, and comment on your 
+results.
+
+```{r}
+n <- 20     # define test input
+
+birthdays <- sample(1:365, size = n, replace = TRUE)     # run function code
+```
+
+```{r}
+shared_birthday <- function(n) {
+  birthdays <- sample(1:365, size = n, replace = TRUE)
+  any(duplicated(birthdays))
+}
+
+set.seed(20)
+shared_birthday(20)
+```
+
+```{r}
+set.seed(123)
+
+n_sims <- 10000
+group_sizes <- 2:50
+
+probs <- sapply(group_sizes, function(n) {
+  mean(replicate(n_sims, shared_birthday(n)))
+})
+```
+
+```{r}
+results <- data.frame(
+  group_size = group_sizes,
+  probability = probs
+)
+
+head(results)
+```
+
+### Problem 2
+
+```{r, message=FALSE, warning=FALSE}
+csv_data = 
+  tibble(
+    files = list.files(path = "data/data/"),
+    path = str_c("data/data/", files)
+  ) |>
+  mutate(data = map(path, read_csv)) |>
+  unnest()
+```
+
+```{r}
+data_tidy =
+  csv_data |>
+  mutate(
+    files = str_replace(files, ".csv", ""),
+    exp_arm = str_sub(files, 1, 3),
+    sub_ID = str_sub(files, 5,6) 
+  ) |>
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    values_to = "outcome",
+    names_prefix = "week_"
+  ) |>
+  mutate(week = as.numeric(week)) |>
+  select(exp_arm, sub_ID, week, outcome)
+```
+
+```{r}
+data_tidy |>
+  ggplot(aes(x = week, y = outcome, group = exp_arm, color = exp_arm)) +
+  geom_point() +
+  geom_path() +
+  facet_grid(~exp_arm)
+```
+
+
+### Problem 3
+
+
